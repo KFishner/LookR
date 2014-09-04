@@ -12,7 +12,8 @@ LookerQuery = function(dictionary, query, fields, filters = NA, limit = NA, outp
 		if(any(is.na(filters))){
 			Looker$filters <- NA
 		} else { 
-			Looker$filters <- sort(filters)}
+			Looker$filters <- filters[order(sapply(strsplit(filters, ":"), head, 1))]
+    }
 
 		Looker$filter_list_clean <- ifelse(any(is.na(filters)), NA, filtersClean(Looker$filters))
 
@@ -30,6 +31,7 @@ LookerQuery = function(dictionary, query, fields, filters = NA, limit = NA, outp
 
 		Looker$nonce <- paste(sample(c(letters[1:26], sample(0:9, 10)), 32), collapse = "")
 
+    Looker <<- Looker
 		Looker$url <- LookerURLBuild(filters = Looker$filters, limit = Looker$limit)
 
 		Looker$StringToSign <- LookerStringToSignBuild(filters = Looker$filters, limit = Looker$limit)
@@ -56,10 +58,17 @@ LookerQuery = function(dictionary, query, fields, filters = NA, limit = NA, outp
 			)
 
 # output type can be a JSON object or data frame #
+    results <- fromJSON(Looker$results, nullValue = NA)
+
+    if (is.element('error_code', names(results)))
+      stop("LookerQuery failed because of ", results$error_code, ": \n\n",
+           (function(x) { if ('testthat' %in% installed.packages()[,1]) {
+            require(testthat); testthat:::colourise(x, 'red') }
+            else x })(Looker$results), "\n\n", call. = FALSE)
 
 		if(output == "data.frame"){
 
-			Looker$output <- LookerToDataFrame(LookerObject = Looker$results)
+			Looker$output <- LookerToDataFrame(LookerObject = results)
 
 		} else {
 
